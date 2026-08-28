@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   description: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
   rowTitle: { fontSize: 14.5, fontWeight: "700", color: colors.text },
   rowSubtitle: { fontSize: 12.5, color: colors.textMuted, marginTop: 2 },
-  modalBackdrop: { flex: 1, backgroundColor: "#0F172A66", justifyContent: "flex-end" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(51,51,51,0.40)", justifyContent: "flex-end" },
   sheet: { backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 28 },
   sheetTitle: { fontSize: 16, fontWeight: "800", color: colors.text, marginBottom: 14 },
 });

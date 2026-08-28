@@ -37,11 +37,11 @@ export function Card({
 /* ── Badge ──────────────────────────────────────────────────────────── */
 type BadgeTone = "primary" | "success" | "warning" | "danger" | "muted";
 const BADGE_TONES: Record<BadgeTone, { bg: string; fg: string }> = {
-  primary: { bg: "#0EA5A01A", fg: colors.primary },
-  success: { bg: "#16A34A1A", fg: colors.success },
-  warning: { bg: "#D977061A", fg: colors.warning },
-  danger: { bg: "#DC26261A", fg: colors.danger },
-  muted: { bg: "#64748B1A", fg: colors.textMuted },
+  primary: { bg: colors.primary + "1A", fg: colors.primary },
+  success: { bg: colors.success + "1A", fg: colors.success },
+  warning: { bg: colors.warning + "1A", fg: colors.warning },
+  danger: { bg: colors.danger + "1A", fg: colors.danger },
+  muted: { bg: colors.textMuted + "1A", fg: colors.textMuted },
 };
 
 export function Badge({ label, tone = "muted" }: { label: string; tone?: BadgeTone }) {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "#CBD5E1",
+    backgroundColor: colors.border,
     padding: 3,
     justifyContent: "center",
   },

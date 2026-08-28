@@ -108,7 +108,7 @@ export default function TeleconsultaScreen() {
             <View
               style={[
                 styles.statusDot,
-                { backgroundColor: isConnected ? "#34D399" : "#FBBF24" },
+                { backgroundColor: isConnected ? colors.success : colors.warning },
               ]}
             />
             <Text style={styles.statusText}>
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   videoArea: {
     aspectRatio: 9 / 14,
     borderRadius: 24,
-    backgroundColor: "#1E293B",
+    backgroundColor: colors.background,
     overflow: "hidden",
     justifyContent: "flex-end",
   },

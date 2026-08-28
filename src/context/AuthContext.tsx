@@ -1,6 +1,6 @@
 // Porta fiel de src/context/AuthContext.tsx — mesma lógica de carregamento de
 // sessão e papéis (user_roles no Supabase); nenhuma mudança de comportamento.
-import { useEffect, useState, type ReactNode } from "react";
+import { useContext, useEffect, useState, type ReactNode } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext, type AppRole } from "@/context/auth-context";
@@ -123,3 +123,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     </AuthContext.Provider>
   );
 }
+
+/**
+ * Hook público de autenticação do ZELAR+.
+ * Mantém o AuthContext como fonte única da sessão e dos papéis.
+ */
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth precisa estar dentro do AuthProvider");
+  }
+
+  return context;
+}
+

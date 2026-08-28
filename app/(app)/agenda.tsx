@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   duration: { fontSize: 10.5, color: colors.textMuted, marginTop: 1 },
   evTitle: { fontSize: 14.5, fontWeight: "700", color: colors.text },
   evSub: { fontSize: 12.5, color: colors.textMuted, marginTop: 2 },
-  modalBackdrop: { flex: 1, backgroundColor: "#00000066", justifyContent: "flex-end" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(51,51,51,0.40)", justifyContent: "flex-end" },
   modalSheet: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 24,

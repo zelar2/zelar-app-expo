@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 12,
     borderRadius: 10,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: colors.danger + "1A",
     alignItems: "center",
   },
   logoutText: { color: colors.danger, fontWeight: "700" },

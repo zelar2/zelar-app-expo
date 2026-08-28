@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   value: { fontSize: 15, color: colors.text, marginTop: 4 },
   signOut: {
     marginTop: 20,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: colors.danger + "1A",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",

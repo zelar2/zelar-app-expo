@@ -24,8 +24,27 @@ export const GESTAO: Role[] = ["admin", "executivo"];
 export const ADMIN: Role[] = ["admin"];
 /** Lado do cliente (paciente e quem cuida dele). */
 export const CLIENTE_SIDE: Role[] = ["paciente", "cliente", "familiar"];
-/** Áreas clínicas do profissional (executivo não acessa dados clínicos). */
+/** Áreas clínicas do profissional (executivo/suporte não acessam dados clínicos). */
 export const CLINICO: Role[] = ["admin", "profissional"];
+
+/** Prontuário: acesso clínico + acesso próprio do cliente/paciente/familiar. */
+export const PRONTUARIO: Role[] = [
+  "admin",
+  "profissional",
+  "paciente",
+  "cliente",
+  "familiar",
+];
+
+/** Documentos: equipe interna e documentos próprios do lado cliente. */
+export const DOCUMENTOS: Role[] = [
+  "admin",
+  "executivo",
+  "profissional",
+  "paciente",
+  "cliente",
+  "familiar",
+];
 
 export const ROUTE_ACCESS: Record<string, Role[]> = {
   /* Principal */
@@ -66,16 +85,16 @@ export const ROUTE_ACCESS: Record<string, Role[]> = {
   "/especialidades": STAFF,
   "/categorias": STAFF,
   "/enfermagem": CLINICO,
-  "/prontuario": ALL_ROLES,
+  "/prontuario": PRONTUARIO,
   "/atendimentos": CLINICO,
   "/meus-atendimentos": ALL_ROLES,
   "/fila": CLINICO,
   "/avaliacoes": ALL_ROLES,
 
   /* Documentos */
-  "/documentos": ALL_ROLES,
-  "/meus-documentos": ALL_ROLES,
-  "/upload-documentos": ALL_ROLES,
+  "/documentos": DOCUMENTOS,
+  "/meus-documentos": DOCUMENTOS,
+  "/upload-documentos": DOCUMENTOS,
   "/assinatura-documentos": STAFF,
   "/aprovacoes": GESTAO,
   "/contratos": STAFF,

@@ -153,8 +153,8 @@ export default function InicioScreen() {
               style={[
                 styles.shortcutIcon,
                 it.tone === "primary" && { backgroundColor: colors.primary },
-                it.tone === "danger" && { backgroundColor: "#DC26261A" },
-                it.tone === "success" && { backgroundColor: "#16A34A1A" },
+                it.tone === "danger" && { backgroundColor: colors.danger + "1A" },
+                it.tone === "success" && { backgroundColor: colors.success + "1A" },
               ]}
             >
               <Text
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "#0EA5A01A",
+    backgroundColor: colors.primary + "1A",
     alignItems: "center",
     justifyContent: "center",
   },

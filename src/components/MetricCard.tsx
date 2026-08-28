@@ -29,7 +29,7 @@ export function MetricCard({ label, value, loading, hint }: MetricCardProps) {
 const styles = StyleSheet.create({
   card: {
     width: "47%",
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#F5F7FA",
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,

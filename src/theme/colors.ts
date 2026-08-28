@@ -1,16 +1,29 @@
-// Paleta baseada no tema do projeto original (tons de saúde/azul-petróleo).
 export const colors = {
-  background: "#0F172A",
-  surface: "#111827",
-  surfaceAlt: "#1E293B",
+  background: "#F5F7FA",
+
+  surface: "#FFFFFF",
+  surfaceAlt: "#F5F7FA",
   card: "#FFFFFF",
-  primary: "#0EA5A0",
-  primaryDark: "#0B7C78",
-  text: "#0F172A",
-  textInverse: "#F8FAFC",
-  textMuted: "#64748B",
+
+  primary: "#2F80ED",
+  primaryLight: "#56CCF2",
+  primaryDark: "#1C6ED5",
+  primaryPressed: "#1558B0",
+
+  success: "#27AE60",
+  successLight: "#6FCF97",
+
+  danger: "#EB5757",
+  warning: "#EB5757",
+
+  disabled: "#BDBDBD",
+
+  text: "#333333",
+  textSecondary: "#666666",
+  textMuted: "#999999",
+  textInverse: "#FFFFFF",
+
   border: "#E2E8F0",
-  danger: "#DC2626",
-  success: "#16A34A",
-  warning: "#D97706",
-};
+} as const;
+
+export type ColorName = keyof typeof colors;

@@ -21,10 +21,10 @@ const STATUS_LABEL: Record<DocStatus, string> = {
 };
 
 const STATUS_COLOR: Record<DocStatus, { bg: string; fg: string }> = {
-  pendente: { bg: "#FEF3C7", fg: "#92400E" },
-  aprovado: { bg: "#DCFCE7", fg: "#166534" },
-  rejeitado: { bg: "#FEE2E2", fg: "#991B1B" },
-  assinado: { bg: "#DBEAFE", fg: "#1E40AF" },
+  pendente: { bg: colors.warning + "1A", fg: colors.warning },
+  aprovado: { bg: colors.success + "1A", fg: colors.success },
+  rejeitado: { bg: colors.danger + "1A", fg: colors.danger },
+  assinado: { bg: colors.primary + "1A", fg: colors.primaryDark },
 };
 
 const TYPE_LABEL: Record<DocType, string> = {
