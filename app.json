@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "ZELAR+",
+    "slug": "zelar-app",
+    "scheme": "zelarapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#0F172A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zelar.app"
+    },
+    "android": {
+      "package": "com.zelar.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F172A"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "REPLACE_WITH_YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-asset"
+    ]
+  }
+}

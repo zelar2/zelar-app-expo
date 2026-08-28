@@ -1,0 +1,40 @@
+# Dependências
+node_modules/
+
+# Expo
+.expo/
+.expo-shared/
+
+# Builds
+dist/
+build/
+web-build/
+android/
+ios/
+
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Backups
+*.backup
+*.bak
+*.old
+*.tmp
+*.backup-*
+*.backup_*
+.backup-*/
+
+# Arquivos temporários
+=
