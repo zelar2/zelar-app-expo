@@ -121,10 +121,35 @@ export default function InicioScreen() {
   const isRedirectRole = role && role in REDIRECT_TARGET;
   const effectiveRole = (role && !isRedirectRole ? role : "paciente") as keyof typeof HERO;
 
-  if (loading) return null;
-  if (isRedirectRole) return <Redirect href={REDIRECT_TARGET[role as AppRole] as never} />;
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingBrand}>ZELAR+</Text>
+        <Text style={styles.loadingText}>Preparando seu ambiente...</Text>
+      </View>
+    );
+  }
 
-  const name = user?.email?.split("@")[0] ?? "Bem-vindo";
+  if (isRedirectRole) {
+    return <Redirect href={REDIRECT_TARGET[role as AppRole] as never} />;
+  }
+
+  // Usuário autenticado sem papel ainda não pode cair silenciosamente
+  // no perfil de paciente.
+  if (!role) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  const metadataName =
+    typeof user?.user_metadata?.full_name === "string"
+      ? user.user_metadata.full_name.trim()
+      : "";
+
+  const name =
+    metadataName ||
+    user?.email?.split("@")[0] ||
+    "Bem-vindo";
+
   const hero = HERO[effectiveRole] ?? HERO.paciente;
   const shortcuts = SHORTCUTS[effectiveRole] ?? SHORTCUTS.paciente;
 
@@ -309,6 +334,24 @@ function ProfessionalPreview() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.background,
+    paddingHorizontal: 24,
+  },
+  loadingBrand: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: colors.primary,
+    letterSpacing: 1,
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: colors.textMuted,
+  },
   container: { flex: 1, backgroundColor: colors.card },
   greeting: { fontSize: 20, fontWeight: "800", color: colors.text },
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
