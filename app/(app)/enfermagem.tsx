@@ -1076,7 +1076,7 @@ function SaeEditor({
   };
 
   const restoreVersion = async (version: SectionVersion) => {
-    if (!canEdit) {
+    if (!canVersion) {
       Alert.alert(
         "Versão",
         "Você não tem permissão para restaurar esta versão.",
@@ -1393,7 +1393,7 @@ function SaeEditor({
           <Button
             title="Adicionar diagnóstico"
             onPress={addDiagnostico}
-            disabled={!canEdit}
+            disabled={!canEvolution}
           />
 
           {diagnosticos.map((item, index) => (
@@ -1640,9 +1640,9 @@ function SaeEditor({
           <Button
             title="+ Nova evolução"
             onPress={() => {
-              if (!canEdit) {
+              if (!canEvolution) {
                 Alert.alert(
-                  "SAE",
+                  "Evolução",
                   "Você não tem permissão para adicionar uma evolução.",
                 );
                 return;
@@ -1650,7 +1650,7 @@ function SaeEditor({
 
               setEvOpen(true);
             }}
-            disabled={!canEdit}
+            disabled={!canEvolution}
           />
 
           {loadingEv ? (
@@ -1853,7 +1853,7 @@ function SaeEditor({
         <Button
           title="Excluir SAE"
           onPress={() => {
-            if (!canEdit) {
+            if (!canDelete) {
               Alert.alert(
                 "SAE",
                 "Você não tem permissão para excluir este processo."
@@ -1864,11 +1864,12 @@ function SaeEditor({
             onDelete();
           }}
           danger
+          disabled={!canDelete}
         />
       </View>
 
       <Modal
-        visible={evOpen}
+        visible={evOpen && canEvolution}
         transparent
         animationType="slide"
         onRequestClose={() => setEvOpen(false)}
@@ -1977,7 +1978,7 @@ function SaeEditor({
                 <Button
                   title={savingEv ? "Salvando..." : "Registrar"}
                   onPress={saveEvolution}
-                  disabled={savingEv || !canEdit}
+                  disabled={savingEv || !canEvolution}
                 />
               </View>
             </ScrollView>
