@@ -38,3 +38,9 @@ Thumbs.db
 
 # Arquivos temporários
 =
+
+# Backups temporários da migração/reconstrução SAE
+*.bak
+*.backup
+*.backup-*
+migration-backups/

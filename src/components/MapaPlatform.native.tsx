@@ -41,13 +41,50 @@ const AVARE_REGION: Region = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
+  // Status reais de service_calls
+  buscando: "#EB5757",
+  aceita: "#2F80ED",
+  a_caminho: "#56CCF2",
+  em_atendimento: "#F2C94C",
+  concluida: "#27AE60",
+  cancelada: "#999999",
+
+  // Compatibilidade com rótulos legados
   Pendente: "#EB5757",
   "Em andamento": "#F2C94C",
   Concluído: "#27AE60",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  buscando: "Buscando profissional",
+  aceita: "Chamada aceita",
+  a_caminho: "Profissional a caminho",
+  em_atendimento: "Em atendimento",
+  concluida: "Atendimento concluído",
+  cancelada: "Chamada cancelada",
+
+  // Compatibilidade com rótulos legados
+  Pendente: "Pendente",
+  "Em andamento": "Em andamento",
+  Concluído: "Concluído",
+};
+
+function normalizeStatus(status: string | null | undefined) {
+  return String(status ?? "").trim().toLowerCase();
+}
+
 function markerColor(status: string) {
-  return STATUS_COLORS[status] ?? "#2F80ED";
+  return STATUS_COLORS[normalizeStatus(status)] ?? "#2F80ED";
+}
+
+function statusLabel(status: string) {
+  const normalized = normalizeStatus(status);
+
+  return (
+    STATUS_LABELS[normalized] ??
+    STATUS_LABELS[status] ??
+    "Status não informado"
+  );
 }
 
 function MapMarker({
@@ -170,7 +207,7 @@ export default function MapaPlatform() {
               longitude: Number(point.lng),
             }}
             title={point.address}
-            description={point.status}
+            description={statusLabel(point.status)}
             onPress={() => setSelected(point)}
             tracksViewChanges={false}
           >

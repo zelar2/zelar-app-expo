@@ -1,0 +1,42 @@
+ZELAR+ — ETAPA 14.2
+
+Objetivo:
+Reconstruir enfermagem.tsx do Web para React Native.
+
+Fonte Web:
+/home/carlos-camargo/Transferências/zelar/src/routes/_authenticated/enfermagem.tsx
+
+Tela Expo:
+app/(app)/enfermagem.tsx
+
+Backup:
+.migration-backups/etapa14-real/enfermagem.tsx.20260831-112926.bak
+
+Tabelas SAE:
+sae_records
+sae_evolutions
+sae_section_versions
+health_records
+profiles
+
+Funcionalidades obrigatórias:
+- listar SAE
+- criar SAE
+- selecionar paciente
+- editar SAE
+- excluir SAE
+- histórico
+- sinais vitais
+- diagnósticos
+- planejamento/intervenções
+- prescrições
+- avaliação
+- evolução
+- versões
+- rascunho
+- publicação
+- autenticação
+- RBAC
+
+IMPORTANTE:
+Nenhuma substituição foi feita nesta etapa.

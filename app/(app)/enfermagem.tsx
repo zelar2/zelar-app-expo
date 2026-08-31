@@ -636,7 +636,7 @@ function SaeEditor({
    * do Supabase.
    */
   const canView = can(PERMISSIONS.SAE_VIEW);
-  const canCreate = can(PERMISSIONS.SAE_CREATE);
+
   const canEditPermission = can(PERMISSIONS.SAE_EDIT);
   const canDelete = can(PERMISSIONS.SAE_DELETE);
   const canEvolutionPermission = can(PERMISSIONS.SAE_EVOLUTION);
@@ -714,6 +714,9 @@ function SaeEditor({
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [versionOpen, setVersionOpen] = useState(false);
   const [versionNote, setVersionNote] = useState("");
+  const [versionSection, setVersionSection] = useState<
+    "coleta" | "diagnosticos" | "planejamento" | "prescricoes" | "avaliacao"
+  >("avaliacao");
   const [restoringVersion, setRestoringVersion] = useState<string | null>(null);
 
   const [diagTitle, setDiagTitle] = useState("");
@@ -1028,7 +1031,6 @@ function SaeEditor({
         .select("version_number")
         .eq("sae_record_id", record.id)
         .eq("section", section)
-        .eq("status", versionStatus)
         .order("version_number", { ascending: false })
         .limit(1);
 
@@ -1155,7 +1157,7 @@ function SaeEditor({
   };
 
   const deleteVersion = async (version: SectionVersion) => {
-    if (!canEdit) {
+    if (!canVersion) {
       Alert.alert(
         "Versão",
         "Você não tem permissão para excluir versões.",
@@ -1163,10 +1165,12 @@ function SaeEditor({
       return;
     }
 
-    if (version.author_id !== record.professional_id) {
+    const isVersionAuthor = version.author_id === user?.id;
+
+    if (!isVersionAuthor && !canDelete) {
       Alert.alert(
         "Versão",
-        "Somente o autor da versão pode excluí-la.",
+        "Somente o autor da versão ou um administrador autorizado pode excluí-la.",
       );
       return;
     }
@@ -1691,7 +1695,7 @@ function SaeEditor({
               Rascunhos e versões publicadas desta SAE.
             </Text>
 
-            {canEdit && (
+            {canVersion && (
               <>
                 <TextInput
                   value={versionNote}
@@ -1708,7 +1712,7 @@ function SaeEditor({
                       : "+ Nova versão"
                   }
                   onPress={() => setVersionOpen((value) => !value)}
-                  disabled={!canEdit}
+                  disabled={!canVersion}
                 />
 
                 {versionOpen && (
@@ -1725,7 +1729,7 @@ function SaeEditor({
                           "rascunho",
                         );
                       }}
-                      disabled={!canEdit}
+                      disabled={!canVersion}
                     />
 
                     <View style={{ height: 8 }} />
@@ -1742,7 +1746,7 @@ function SaeEditor({
                           "publicada",
                         );
                       }}
-                      disabled={!canEdit}
+                      disabled={!canVersion}
                     />
                   </View>
                 )}
@@ -1804,7 +1808,7 @@ function SaeEditor({
                     : version.author_id ?? "—"}
                 </Text>
 
-                {canEdit && (
+                {canVersion && (
                   <>
                     <View style={{ height: 8 }} />
 
@@ -1827,7 +1831,7 @@ function SaeEditor({
                       title="Excluir versão"
                       onPress={() => deleteVersion(version)}
                       disabled={
-                        version.author_id !== record.professional_id
+                        version.author_id !== user?.id && !canDelete
                       }
                       danger
                     />
@@ -1992,6 +1996,40 @@ function SaeEditor({
             <ScrollView>
               <Text style={styles.modalTitle}>Nova versão</Text>
 
+              <Text style={styles.secondary}>
+                Seção da SAE
+              </Text>
+
+              <View style={{ gap: 8, marginBottom: 12 }}>
+                {[
+                  ["coleta", "Coleta"],
+                  ["diagnosticos", "Diagnósticos"],
+                  ["planejamento", "Planejamento"],
+                  ["prescricoes", "Prescrições"],
+                  ["avaliacao", "Avaliação"],
+                ].map(([value, label]) => (
+                  <Button
+                    key={value}
+                    title={
+                      versionSection === value
+                        ? `✓ ${label}`
+                        : label
+                    }
+                    onPress={() =>
+                      setVersionSection(
+                        value as
+                          | "coleta"
+                          | "diagnosticos"
+                          | "planejamento"
+                          | "prescricoes"
+                          | "avaliacao",
+                      )
+                    }
+                    disabled={!canVersion}
+                  />
+                ))}
+              </View>
+
               <Field
                 label="Observação da versão"
                 value={versionNote}
@@ -2008,17 +2046,29 @@ function SaeEditor({
                 <Button
                   title="Salvar rascunho"
                   onPress={async () => {
-                    if (!canEdit) {
+                    if (!canVersion) {
                       Alert.alert(
                         "SAE",
-                        "Você não tem permissão para criar uma versão.",
+                        "Você não tem permissão para criar ou publicar versões.",
                       );
                       return;
                     }
 
-                    await publishSection(
-                      "avaliacao",
-                      {
+                    const contentBySection: Record<string, JsonObject> = {
+                      coleta: {
+                        historico,
+                        vital_signs: vital,
+                      },
+                      diagnosticos: {
+                        diagnosticos,
+                      },
+                      planejamento: {
+                        planejamento,
+                      },
+                      prescricoes: {
+                        prescricoes,
+                      },
+                      avaliacao: {
                         historico,
                         vital_signs: vital,
                         diagnosticos,
@@ -2027,18 +2077,23 @@ function SaeEditor({
                         avaliacao,
                         status,
                       },
+                    };
+
+                    await publishSection(
+                      versionSection,
+                      contentBySection[versionSection],
                       "rascunho",
                     );
 
                     setVersionOpen(false);
                   }}
-                  disabled={!canEdit}
+                  disabled={!canVersion}
                 />
 
                 <Button
                   title="Publicar"
                   onPress={async () => {
-                    if (!canEdit) {
+                    if (!canVersion) {
                       Alert.alert(
                         "SAE",
                         "Você não tem permissão para publicar uma versão.",
@@ -2046,9 +2101,21 @@ function SaeEditor({
                       return;
                     }
 
-                    await publishSection(
-                      "avaliacao",
-                      {
+                    const contentBySection: Record<string, JsonObject> = {
+                      coleta: {
+                        historico,
+                        vital_signs: vital,
+                      },
+                      diagnosticos: {
+                        diagnosticos,
+                      },
+                      planejamento: {
+                        planejamento,
+                      },
+                      prescricoes: {
+                        prescricoes,
+                      },
+                      avaliacao: {
                         historico,
                         vital_signs: vital,
                         diagnosticos,
@@ -2057,12 +2124,17 @@ function SaeEditor({
                         avaliacao,
                         status,
                       },
+                    };
+
+                    await publishSection(
+                      versionSection,
+                      contentBySection[versionSection],
                       "publicada",
                     );
 
                     setVersionOpen(false);
                   }}
-                  disabled={!canEdit}
+                  disabled={!canVersion}
                 />
               </View>
             </ScrollView>

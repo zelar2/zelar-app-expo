@@ -1,0 +1,62 @@
+ZELAR+ — SAE / ENFERMAGEM — ESPECIFICAÇÃO NATIVA
+
+FONTE FUNCIONAL:
+src/routes/_authenticated/enfermagem.tsx
+
+TABELAS:
+- sae_records
+- sae_evolutions
+- sae_section_versions
+- health_records
+- profiles
+
+FUNÇÕES OBRIGATÓRIAS:
+- listar SAE
+- selecionar SAE
+- criar SAE
+- pesquisar paciente
+- editar SAE
+- excluir SAE
+- carregar evoluções
+- registrar evolução
+- sinais vitais
+- histórico
+- diagnósticos
+- planejamento/intervenções
+- prescrições
+- avaliação
+- alterar status
+- salvar seção
+- publicar seção
+- versões
+- rascunho
+- publicação
+- histórico de versões
+
+ARQUITETURA:
+React Native / Expo Router
+ScrollView
+SafeAreaView
+View
+Text
+TextInput
+Pressable
+ActivityIndicator
+Alert
+Modal
+
+NÃO COPIAR:
+HTML
+Radix
+TanStack Router
+componentes DOM
+componentes específicos da Web
+
+MANTER:
+Supabase
+AuthContext
+RBAC
+mesmas tabelas
+mesmos campos
+mesmas operações
+mesmas regras funcionais

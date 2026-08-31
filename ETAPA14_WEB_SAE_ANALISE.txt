@@ -1,0 +1,101 @@
+ZELAR+ — ANÁLISE WEB ENFERMAGEM / SAE
+Gerado em: seg 31 ago 2026 11:25:14 -03
+
+WEB: /home/carlos-camargo/Transferências/zelar/src/routes/_authenticated/enfermagem.tsx
+EXPO: app/(app)/enfermagem.tsx
+
+=== TABELAS ===
+.from("health_records")
+.from("profiles")
+.from("sae_evolutions")
+.from("sae_records")
+.from("sae_section_versions")
+
+=== SUPABASE ===
+169:      .from("sae_records")
+170:      .select("*")
+318:        .from("profiles")
+319:        .select("id, full_name")
+339:      .from("sae_records")
+340:      .insert({
+346:      .select("id")
+464:      .from("sae_evolutions")
+465:      .select("*")
+522:        .from("sae_records")
+523:        .update(payload as never)
+537:      .from("sae_records")
+538:      .update(patch as never)
+547:    const { error } = await supabase.from("sae_records").delete().eq("id", record.id);
+1126:    const { error } = await supabase.from("sae_evolutions").insert({
+1136:      await supabase.from("health_records").insert({
+1231:      .from("sae_section_versions")
+1232:      .select("*")
+1261:      const { error } = await supabase.from("sae_section_versions").insert({
+1283:    const { error } = await supabase.from("sae_section_versions").delete().eq("id", id);
+
+=== ESTADOS ===
+2:import { useCallback, useEffect, useState } from "react";
+158:  const [records, setRecords] = useState<SaeRecord[]>([]);
+159:  const [loading, setLoading] = useState(false);
+160:  const [selectedId, setSelectedId] = useState<string | null>(null);
+161:  const [newOpen, setNewOpen] = useState(false);
+165:  const load = useCallback(async () => {
+177:  useEffect(() => {
+291:  const [title, setTitle] = useState("");
+292:  const [patientId, setPatientId] = useState<string>("");
+293:  const [search, setSearch] = useState("");
+294:  const [patients, setPatients] = useState<PatientOption[]>([]);
+295:  const [searching, setSearching] = useState(false);
+296:  const [saving, setSaving] = useState(false);
+298:  useEffect(() => {
+307:  useEffect(() => {
+446:  const [tab, setTab] = useState("coleta");
+447:  const [evolutions, setEvolutions] = useState<Evolucao[]>([]);
+448:  const [loadingEv, setLoadingEv] = useState(false);
+449:  const [evOpen, setEvOpen] = useState(false);
+452:  const [historico, setHistorico] = useState(record.historico ?? {});
+453:  const [vital, setVital] = useState<VitalSigns>(record.vital_signs ?? {});
+454:  const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>(record.diagnosticos ?? []);
+455:  const [planejamento, setPlanejamento] = useState<Intervencao[]>(record.planejamento ?? []);
+456:  const [prescricoes, setPrescricoes] = useState<Prescricao[]>(record.prescricoes ?? []);
+457:  const [avaliacao, setAvaliacao] = useState(record.avaliacao ?? "");
+458:  const [status, setStatus] = useState<SaeStatus>(record.status);
+459:  const [saving, setSaving] = useState(false);
+461:  const loadEvolutions = useCallback(async () => {
+472:  useEffect(() => {
+476:  const sectionPayload = useCallback(
+494:  const applySectionPayload = useCallback(
+518:  const publishSection = useCallback(
+982:  const [titulo, setTitulo] = useState("");
+983:  const [rel, setRel] = useState("");
+984:  const [evi, setEvi] = useState("");
+1021:  const [desc, setDesc] = useState("");
+1022:  const [freq, setFreq] = useState("");
+1053:  const [item, setItem] = useState("");
+1054:  const [via, setVia] = useState("");
+1055:  const [horario, setHorario] = useState("");
+1056:  const [obs, setObs] = useState("");
+1109:  const [content, setContent] = useState("");
+1110:  const [vital, setVital] = useState<VitalSigns>({});
+1111:  const [saving, setSaving] = useState(false);
+1113:  useEffect(() => {
+1222:  const [versions, setVersions] = useState<SectionVersion[]>([]);
+1223:  const [loading, setLoading] = useState(false);
+1224:  const [saving, setSaving] = useState<null | "rascunho" | "publicada">(null);
+1225:  const [histOpen, setHistOpen] = useState(false);
+1226:  const [note, setNote] = useState("");
+1228:  const load = useCallback(async () => {
+1241:  useEffect(() => {
+
+=== COMPONENTES ===
+156:function EnfermagemPage() {
+280:function NewSaeDialog({
+435:function SaeDetail({
+934:function Section({ title, children }: { title: string; children: React.ReactNode }) {
+945:function Field({ label, children }: { label: string; children: React.ReactNode }) {
+954:function VitalInput({
+981:function AddDiagnostico({ onAdd }: { onAdd: (d: Diagnostico) => void }) {
+1020:function AddIntervencao({ onAdd }: { onAdd: (i: Intervencao) => void }) {
+1052:function AddPrescricao({ onAdd }: { onAdd: (p: Prescricao) => void }) {
+1098:function NewEvolucaoDialog({
+1206:function SectionVersionBar({

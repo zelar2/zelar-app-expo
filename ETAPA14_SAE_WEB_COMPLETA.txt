@@ -1,0 +1,1338 @@
+============================================================
+TIPOS / CONSTANTES SAE
+============================================================
+import { createFileRoute } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ClipboardList,
+  Stethoscope,
+  Syringe,
+  HeartPulse,
+  BookOpen,
+  Activity,
+  Plus,
+  ArrowLeft,
+  Loader2,
+  Trash2,
+  Search,
+  User as UserIcon,
+  CheckCircle2,
+  Circle,
+  X,
+  History,
+  Save,
+  Upload,
+  FileClock,
+  RotateCcw,
+} from "lucide-react";
+
+import { AppShell } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/use-auth";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/_authenticated/enfermagem")({
+  component: EnfermagemPage,
+});
+
+type SaeStatus = "aberto" | "em_andamento" | "concluido" | "cancelado";
+
+interface VitalSigns {
+  pa?: string;
+  fc?: string;
+  fr?: string;
+  temp?: string;
+  spo2?: string;
+  dor?: string;
+  glicemia?: string;
+}
+
+interface Diagnostico {
+  titulo: string;
+  relacionado_a?: string;
+  evidenciado_por?: string;
+}
+
+interface Intervencao {
+  descricao: string;
+  frequencia?: string;
+}
+
+interface Prescricao {
+  item: string;
+  via?: string;
+  horario?: string;
+  observacao?: string;
+  feito?: boolean;
+}
+
+interface SaeRecord {
+  id: string;
+  patient_id: string;
+  professional_id: string;
+  title: string;
+  status: SaeStatus;
+  historico: { queixa?: string; anamnese?: string; exame_fisico?: string };
+  diagnosticos: Diagnostico[];
+  planejamento: Intervencao[];
+  prescricoes: Prescricao[];
+  avaliacao: string | null;
+  vital_signs: VitalSigns;
+  opened_at: string;
+  closed_at: string | null;
+}
+
+interface Evolucao {
+  id: string;
+  sae_record_id: string;
+  patient_id: string;
+  professional_id: string;
+  content: string;
+  vital_signs: VitalSigns;
+  procedures: { name: string }[];
+  created_at: string;
+}
+
+interface PatientOption {
+  id: string;
+  full_name: string | null;
+}
+
+const STATUS_LABEL: Record<SaeStatus, string> = {
+  aberto: "Aberto",
+  em_andamento: "Em andamento",
+  concluido: "Concluído",
+  cancelado: "Cancelado",
+};
+
+const STATUS_COLOR: Record<SaeStatus, string> = {
+  aberto: "bg-primary/10 text-primary",
+  em_andamento: "bg-warning/10 text-warning",
+  concluido: "bg-success/10 text-success",
+  cancelado: "bg-muted text-muted-foreground",
+};
+
+type SectionKey = "coleta" | "diagnosticos" | "planejamento" | "prescricoes" | "avaliacao";
+type VersionStatus = "rascunho" | "publicada";
+
+const SECTION_LABEL: Record<SectionKey, string> = {
+  coleta: "Coleta",
+  diagnosticos: "Diagnósticos",
+  planejamento: "Planejamento",
+  prescricoes: "Prescrições",
+  avaliacao: "Avaliação",
+};
+
+interface SectionVersion {
+  id: string;
+  sae_record_id: string;
+  section: SectionKey;
+  status: VersionStatus;
+  version_number: number;
+  payload: Record<string, unknown>;
+  note: string | null;
+  author_id: string;
+  created_at: string;
+}
+
+function EnfermagemPage() {
+
+============================================================
+ENFERMAGEM PAGE
+============================================================
+function EnfermagemPage() {
+  const { user, primaryRole, loading: authLoading } = useProfile();
+  const [records, setRecords] = useState<SaeRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [newOpen, setNewOpen] = useState(false);
+
+  const isProfessional = primaryRole === "profissional" || primaryRole === "admin";
+
+  const load = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("sae_records")
+      .select("*")
+      .order("opened_at", { ascending: false });
+    if (error) toast.error("Erro: " + error.message);
+    setRecords((data as unknown as SaeRecord[]) ?? []);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    if (!authLoading) void load();
+  }, [authLoading, load]);
+
+  const selected = records.find((r) => r.id === selectedId) ?? null;
+
+  if (selected) {
+    return (
+      <SaeDetail
+        record={selected}
+        canEdit={isProfessional && selected.professional_id === user?.id}
+        onBack={() => setSelectedId(null)}
+        onChanged={load}
+      />
+    );
+  }
+
+  return (
+    <AppShell title="Enfermagem — SAE" subtitle="Sistematização da Assistência">
+      <div className="rounded-3xl bg-gradient-success p-5 text-success-foreground shadow-elevated">
+        <p className="text-xs font-medium uppercase tracking-wider text-white/85">SAE</p>
+        <h2 className="mt-1 text-xl font-bold">Processo de Enfermagem</h2>
+        <p className="mt-1 text-sm text-white/90">
+          Coleta · Diagnóstico · Planejamento · Prescrição · Implementação · Evolução
+        </p>
+        {isProfessional && (
+          <Button
+            className="mt-4 h-10 rounded-xl bg-white text-success hover:bg-white/90"
+            onClick={() => setNewOpen(true)}
+          >
+            <Plus className="h-4 w-4" /> Iniciar novo processo
+          </Button>
+        )}
+      </div>
+
+      <h3 className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        Meus processos ({records.length})
+      </h3>
+
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      ) : records.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+          <ClipboardList className="mx-auto h-8 w-8 text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">
+            {isProfessional
+              ? "Nenhum processo aberto. Inicie o primeiro."
+              : "Nenhum processo de enfermagem ainda."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {records.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setSelectedId(r.id)}
+              className="w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm hover:shadow-elegant transition-shadow"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground truncate">{r.title}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Aberto em {new Date(r.opened_at).toLocaleDateString("pt-BR")}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <Badge variant="secondary" className="text-[10px]">
+                      {r.diagnosticos?.length ?? 0} dx
+                    </Badge>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {r.prescricoes?.length ?? 0} presc
+                    </Badge>
+                  </div>
+                </div>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                    STATUS_COLOR[r.status],
+                  )}
+                >
+                  {STATUS_LABEL[r.status]}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <NewSaeDialog
+        open={newOpen}
+        onOpenChange={setNewOpen}
+        professionalId={user?.id}
+        onCreated={async (id) => {
+          setNewOpen(false);
+          await load();
+          setSelectedId(id);
+        }}
+      />
+    </AppShell>
+  );
+}
+
+function NewSaeDialog({
+
+============================================================
+NEW SAE
+============================================================
+function NewSaeDialog({
+  open,
+  onOpenChange,
+  professionalId,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  professionalId?: string;
+  onCreated: (id: string) => void | Promise<void>;
+}) {
+  const [title, setTitle] = useState("");
+  const [patientId, setPatientId] = useState<string>("");
+  const [search, setSearch] = useState("");
+  const [patients, setPatients] = useState<PatientOption[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setTitle("");
+      setPatientId("");
+      setSearch("");
+      setPatients([]);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const q = search.trim();
+    if (q.length < 2) {
+      setPatients([]);
+      return;
+    }
+    let cancelled = false;
+    setSearching(true);
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .ilike("full_name", `%${q}%`)
+        .limit(10);
+      if (cancelled) return;
+      setPatients((data as PatientOption[] | null) ?? []);
+      setSearching(false);
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [search, open]);
+
+  const submit = async () => {
+    if (!professionalId || !title.trim() || !patientId) {
+      toast.error("Informe título e paciente.");
+      return;
+    }
+    setSaving(true);
+    const { data, error } = await supabase
+      .from("sae_records")
+      .insert({
+        title: title.trim(),
+        patient_id: patientId,
+        professional_id: professionalId,
+        status: "aberto" as SaeStatus,
+      })
+      .select("id")
+      .single();
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Processo iniciado!");
+    await onCreated(data.id);
+  };
+
+  const selectedPatient = patients.find((p) => p.id === patientId);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Novo processo de enfermagem</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Título</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ex: Cuidado domiciliar — Sra. Maria"
+            />
+          </div>
+          <div>
+            <Label>Paciente</Label>
+            {selectedPatient ? (
+              <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-card p-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <UserIcon className="h-4 w-4" />
+                </div>
+                <span className="flex-1 text-sm font-medium">
+                  {selectedPatient.full_name ?? "Sem nome"}
+                </span>
+                <button
+                  onClick={() => {
+                    setPatientId("");
+                    setSearch("");
+                  }}
+                  className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Buscar paciente pelo nome"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                {searching && <p className="mt-1 text-xs text-muted-foreground">Buscando...</p>}
+                {patients.length > 0 && (
+                  <div className="mt-2 max-h-40 space-y-1 overflow-auto rounded-xl border border-border p-1">
+                    {patients.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setPatientId(p.id)}
+                        className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm hover:bg-muted"
+                      >
+                        <UserIcon className="h-4 w-4 text-muted-foreground" />
+                        {p.full_name ?? "Sem nome"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button className="bg-gradient-primary" onClick={submit} disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Criar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SaeDetail({
+
+============================================================
+SAE DETAIL — PARTE 1
+============================================================
+function SaeDetail({
+  record,
+  canEdit,
+  onBack,
+  onChanged,
+}: {
+  record: SaeRecord;
+  canEdit: boolean;
+  onBack: () => void;
+  onChanged: () => void | Promise<void>;
+}) {
+  const [tab, setTab] = useState("coleta");
+  const [evolutions, setEvolutions] = useState<Evolucao[]>([]);
+  const [loadingEv, setLoadingEv] = useState(false);
+  const [evOpen, setEvOpen] = useState(false);
+
+  // Editable local state
+  const [historico, setHistorico] = useState(record.historico ?? {});
+  const [vital, setVital] = useState<VitalSigns>(record.vital_signs ?? {});
+  const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>(record.diagnosticos ?? []);
+  const [planejamento, setPlanejamento] = useState<Intervencao[]>(record.planejamento ?? []);
+  const [prescricoes, setPrescricoes] = useState<Prescricao[]>(record.prescricoes ?? []);
+  const [avaliacao, setAvaliacao] = useState(record.avaliacao ?? "");
+  const [status, setStatus] = useState<SaeStatus>(record.status);
+  const [saving, setSaving] = useState(false);
+
+  const loadEvolutions = useCallback(async () => {
+    setLoadingEv(true);
+    const { data } = await supabase
+      .from("sae_evolutions")
+      .select("*")
+      .eq("sae_record_id", record.id)
+      .order("created_at", { ascending: false });
+    setEvolutions((data as unknown as Evolucao[]) ?? []);
+    setLoadingEv(false);
+  }, [record.id]);
+
+  useEffect(() => {
+    void loadEvolutions();
+  }, [loadEvolutions]);
+
+  const sectionPayload = useCallback(
+    (section: SectionKey): Record<string, unknown> => {
+      switch (section) {
+        case "coleta":
+          return { historico, vital_signs: vital };
+        case "diagnosticos":
+          return { diagnosticos };
+        case "planejamento":
+          return { planejamento };
+        case "prescricoes":
+          return { prescricoes };
+        case "avaliacao":
+          return { avaliacao: avaliacao.trim() || null };
+      }
+    },
+    [historico, vital, diagnosticos, planejamento, prescricoes, avaliacao],
+  );
+
+  const applySectionPayload = useCallback(
+    (section: SectionKey, payload: Record<string, unknown>) => {
+      switch (section) {
+        case "coleta":
+          setHistorico((payload.historico as SaeRecord["historico"]) ?? {});
+          setVital((payload.vital_signs as VitalSigns) ?? {});
+          break;
+        case "diagnosticos":
+          setDiagnosticos((payload.diagnosticos as Diagnostico[]) ?? []);
+          break;
+        case "planejamento":
+          setPlanejamento((payload.planejamento as Intervencao[]) ?? []);
+          break;
+        case "prescricoes":
+          setPrescricoes((payload.prescricoes as Prescricao[]) ?? []);
+          break;
+        case "avaliacao":
+          setAvaliacao(((payload.avaliacao as string | null) ?? "") || "");
+          break;
+      }
+    },
+    [],
+  );
+
+  const publishSection = useCallback(
+    async (section: SectionKey) => {
+      const payload = sectionPayload(section);
+      const { error } = await supabase
+        .from("sae_records")
+        .update(payload as never)
+        .eq("id", record.id);
+      if (error) throw new Error(error.message);
+      await onChanged();
+    },
+    [record.id, sectionPayload, onChanged],
+  );
+
+  const updateStatus = async (next: SaeStatus) => {
+    setStatus(next);
+    setSaving(true);
+    const patch: Record<string, unknown> = { status: next };
+    if (next === "concluido" && !record.closed_at) patch.closed_at = new Date().toISOString();
+    const { error } = await supabase
+      .from("sae_records")
+      .update(patch as never)
+      .eq("id", record.id);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    await onChanged();
+  };
+
+  const del = async () => {
+    if (!confirm("Excluir este processo?")) return;
+    const { error } = await supabase.from("sae_records").delete().eq("id", record.id);
+    if (error) return toast.error(error.message);
+    toast.success("Processo excluído");
+    onBack();
+
+============================================================
+SAE DETAIL — PARTE 2
+============================================================
+    onBack();
+    await onChanged();
+  };
+
+  return (
+    <AppShell
+      title={record.title}
+      subtitle={`Aberto em ${new Date(record.opened_at).toLocaleDateString("pt-BR")}`}
+      headerLeft={
+        <button onClick={onBack} className="rounded-lg p-2 text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+      }
+    >
+      <div className="mb-4 flex items-center gap-2">
+        <span
+          className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", STATUS_COLOR[status])}
+        >
+          {STATUS_LABEL[status]}
+        </span>
+        {canEdit && (
+          <Select
+            value={status}
+            onValueChange={(v) => updateStatus(v as SaeStatus)}
+            disabled={saving}
+          >
+            <SelectTrigger className="h-8 w-40 rounded-lg text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="aberto">Aberto</SelectItem>
+              <SelectItem value="em_andamento">Em andamento</SelectItem>
+              <SelectItem value="concluido">Concluído</SelectItem>
+              <SelectItem value="cancelado">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        {canEdit && (
+          <button
+            onClick={del}
+            className="ml-auto rounded-lg p-2 text-muted-foreground hover:text-destructive"
+            aria-label="Excluir"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="grid grid-cols-3 gap-1 rounded-xl">
+          <TabsTrigger value="coleta" className="text-xs">
+            <ClipboardList className="h-3.5 w-3.5" /> Coleta
+          </TabsTrigger>
+          <TabsTrigger value="diagnosticos" className="text-xs">
+            <Stethoscope className="h-3.5 w-3.5" /> Dx
+          </TabsTrigger>
+          <TabsTrigger value="plano" className="text-xs">
+            <BookOpen className="h-3.5 w-3.5" /> Plano
+          </TabsTrigger>
+        </TabsList>
+        <TabsList className="mt-1 grid grid-cols-3 gap-1 rounded-xl">
+          <TabsTrigger value="prescricao" className="text-xs">
+            <Syringe className="h-3.5 w-3.5" /> Presc
+          </TabsTrigger>
+          <TabsTrigger value="evolucao" className="text-xs">
+            <HeartPulse className="h-3.5 w-3.5" /> Evolução
+          </TabsTrigger>
+          <TabsTrigger value="avaliacao" className="text-xs">
+            <Activity className="h-3.5 w-3.5" /> Avaliação
+          </TabsTrigger>
+        </TabsList>
+
+        {/* 1. Coleta de dados */}
+        <TabsContent value="coleta" className="mt-4 space-y-4">
+          <SectionVersionBar
+            recordId={record.id}
+            section="coleta"
+            canEdit={canEdit}
+            currentPayload={sectionPayload("coleta")}
+            onRestore={(p) => applySectionPayload("coleta", p)}
+            onPublish={() => publishSection("coleta")}
+          />
+
+          <Section title="Histórico">
+            <Field label="Queixa principal">
+              <Textarea
+                rows={2}
+                value={historico.queixa ?? ""}
+                readOnly={!canEdit}
+                onChange={(e) => setHistorico({ ...historico, queixa: e.target.value })}
+              />
+            </Field>
+            <Field label="Anamnese">
+              <Textarea
+                rows={3}
+                value={historico.anamnese ?? ""}
+                readOnly={!canEdit}
+                onChange={(e) => setHistorico({ ...historico, anamnese: e.target.value })}
+              />
+            </Field>
+            <Field label="Exame físico">
+              <Textarea
+                rows={3}
+                value={historico.exame_fisico ?? ""}
+                readOnly={!canEdit}
+                onChange={(e) => setHistorico({ ...historico, exame_fisico: e.target.value })}
+              />
+            </Field>
+          </Section>
+
+          <Section title="Sinais vitais">
+            <div className="grid grid-cols-2 gap-2">
+              <VitalInput
+                label="PA (mmHg)"
+                v={vital.pa}
+                onChange={(x) => setVital({ ...vital, pa: x })}
+                canEdit={canEdit}
+                placeholder="120x80"
+              />
+              <VitalInput
+                label="FC (bpm)"
+                v={vital.fc}
+                onChange={(x) => setVital({ ...vital, fc: x })}
+                canEdit={canEdit}
+                placeholder="72"
+              />
+              <VitalInput
+                label="FR (irpm)"
+                v={vital.fr}
+                onChange={(x) => setVital({ ...vital, fr: x })}
+                canEdit={canEdit}
+                placeholder="16"
+              />
+              <VitalInput
+                label="Temp (°C)"
+                v={vital.temp}
+                onChange={(x) => setVital({ ...vital, temp: x })}
+                canEdit={canEdit}
+                placeholder="36.5"
+              />
+              <VitalInput
+                label="SpO₂ (%)"
+                v={vital.spo2}
+                onChange={(x) => setVital({ ...vital, spo2: x })}
+                canEdit={canEdit}
+                placeholder="98"
+              />
+              <VitalInput
+                label="Dor (0-10)"
+                v={vital.dor}
+                onChange={(x) => setVital({ ...vital, dor: x })}
+                canEdit={canEdit}
+                placeholder="0"
+              />
+              <VitalInput
+                label="Glicemia"
+                v={vital.glicemia}
+                onChange={(x) => setVital({ ...vital, glicemia: x })}
+                canEdit={canEdit}
+                placeholder="90"
+              />
+            </div>
+          </Section>
+        </TabsContent>
+
+        {/* 2. Diagnósticos */}
+        <TabsContent value="diagnosticos" className="mt-4 space-y-3">
+          <SectionVersionBar
+            recordId={record.id}
+            section="diagnosticos"
+            canEdit={canEdit}
+            currentPayload={sectionPayload("diagnosticos")}
+            onRestore={(p) => applySectionPayload("diagnosticos", p)}
+            onPublish={() => publishSection("diagnosticos")}
+          />
+
+          {diagnosticos.map((d, i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-foreground">{d.titulo}</p>
+                {canEdit && (
+                  <button
+                    onClick={() => setDiagnosticos(diagnosticos.filter((_, j) => j !== i))}
+                    className="rounded-lg p-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              {d.relacionado_a && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  <span className="font-medium">Relacionado a:</span> {d.relacionado_a}
+                </p>
+              )}
+              {d.evidenciado_por && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium">Evidenciado por:</span> {d.evidenciado_por}
+                </p>
+              )}
+            </div>
+          ))}
+          {canEdit && <AddDiagnostico onAdd={(d) => setDiagnosticos([...diagnosticos, d])} />}
+          {diagnosticos.length === 0 && !canEdit && (
+            <p className="text-center text-sm text-muted-foreground">Sem diagnósticos.</p>
+          )}
+        </TabsContent>
+
+        {/* 3. Planejamento (intervenções) */}
+        <TabsContent value="plano" className="mt-4 space-y-3">
+          <SectionVersionBar
+            recordId={record.id}
+            section="planejamento"
+            canEdit={canEdit}
+            currentPayload={sectionPayload("planejamento")}
+            onRestore={(p) => applySectionPayload("planejamento", p)}
+            onPublish={() => publishSection("planejamento")}
+          />
+
+          {planejamento.map((p, i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground">{p.descricao}</p>
+                  {p.frequencia && (
+                    <p className="mt-1 text-xs text-muted-foreground">Frequência: {p.frequencia}</p>
+                  )}
+                </div>
+                {canEdit && (
+                  <button
+                    onClick={() => setPlanejamento(planejamento.filter((_, j) => j !== i))}
+                    className="rounded-lg p-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {canEdit && <AddIntervencao onAdd={(x) => setPlanejamento([...planejamento, x])} />}
+          {planejamento.length === 0 && !canEdit && (
+            <p className="text-center text-sm text-muted-foreground">Sem intervenções.</p>
+          )}
+        </TabsContent>
+
+        {/* 4. Prescrições */}
+        <TabsContent value="prescricao" className="mt-4 space-y-3">
+          <SectionVersionBar
+            recordId={record.id}
+            section="prescricoes"
+            canEdit={canEdit}
+            currentPayload={sectionPayload("prescricoes")}
+            onRestore={(p) => applySectionPayload("prescricoes", p)}
+            onPublish={() => publishSection("prescricoes")}
+          />
+
+          {prescricoes.map((p, i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+              <div className="flex items-start gap-2">
+                <button
+                  onClick={() => {
+                    if (!canEdit) return;
+                    const copy = [...prescricoes];
+                    copy[i] = { ...copy[i], feito: !copy[i].feito };
+                    setPrescricoes(copy);
+                  }}
+                  className="mt-0.5 shrink-0"
+                >
+                  {p.feito ? (
+                    <CheckCircle2 className="h-5 w-5 text-success" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={cn(
+                      "text-sm font-semibold",
+                      p.feito && "line-through text-muted-foreground",
+                    )}
+                  >
+                    {p.item}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
+                    {p.via && <span>Via: {p.via}</span>}
+                    {p.horario && <span>· {p.horario}</span>}
+                  </div>
+                  {p.observacao && (
+                    <p className="mt-1 text-xs text-muted-foreground">{p.observacao}</p>
+                  )}
+                </div>
+                {canEdit && (
+                  <button
+                    onClick={() => setPrescricoes(prescricoes.filter((_, j) => j !== i))}
+                    className="rounded-lg p-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {canEdit && <AddPrescricao onAdd={(x) => setPrescricoes([...prescricoes, x])} />}
+          {prescricoes.length === 0 && !canEdit && (
+            <p className="text-center text-sm text-muted-foreground">Sem prescrições.</p>
+          )}
+        </TabsContent>
+
+        {/* 5. Evoluções */}
+        <TabsContent value="evolucao" className="mt-4 space-y-3">
+          {canEdit && (
+            <Button
+              className="w-full rounded-xl bg-gradient-primary"
+              onClick={() => setEvOpen(true)}
+            >
+              <Plus className="h-4 w-4" /> Nova evolução
+            </Button>
+          )}
+          {loadingEv ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          ) : evolutions.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground">
+              Nenhuma evolução registrada.
+            </p>
+          ) : (
+            evolutions.map((e) => (
+              <div key={e.id} className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+                <p className="text-[11px] text-muted-foreground">
+                  {new Date(e.created_at).toLocaleString("pt-BR")}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{e.content}</p>
+                {Object.keys(e.vital_signs ?? {}).length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {Object.entries(e.vital_signs).map(([k, v]) =>
+                      v ? (
+                        <Badge key={k} variant="secondary" className="text-[10px]">
+                          {k.toUpperCase()}: {v as string}
+                        </Badge>
+                      ) : null,
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+          <NewEvolucaoDialog
+            open={evOpen}
+            onOpenChange={setEvOpen}
+            record={record}
+            onSaved={async () => {
+              setEvOpen(false);
+              await loadEvolutions();
+              toast.success("Evolução registrada");
+            }}
+          />
+        </TabsContent>
+
+        {/* 6. Avaliação final */}
+        <TabsContent value="avaliacao" className="mt-4 space-y-3">
+          <SectionVersionBar
+            recordId={record.id}
+            section="avaliacao"
+            canEdit={canEdit}
+            currentPayload={sectionPayload("avaliacao")}
+            onRestore={(p) => applySectionPayload("avaliacao", p)}
+            onPublish={() => publishSection("avaliacao")}
+          />
+
+          <Field label="Avaliação e desfecho">
+            <Textarea
+              rows={8}
+              value={avaliacao}
+              readOnly={!canEdit}
+              placeholder="Descreva a resposta do paciente às intervenções, evolução do quadro e desfecho."
+              onChange={(e) => setAvaliacao(e.target.value)}
+            />
+          </Field>
+        </TabsContent>
+      </Tabs>
+    </AppShell>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </h4>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <Label className="text-xs">{label}</Label>
+      <div className="mt-1">{children}</div>
+    </div>
+
+============================================================
+COMPONENTES DE APOIO
+============================================================
+    </div>
+  );
+}
+
+function VitalInput({
+  label,
+  v,
+  onChange,
+  canEdit,
+  placeholder,
+}: {
+  label: string;
+  v?: string;
+  onChange: (x: string) => void;
+  canEdit: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</Label>
+      <Input
+        value={v ?? ""}
+        readOnly={!canEdit}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 rounded-lg"
+      />
+    </div>
+  );
+}
+
+function AddDiagnostico({ onAdd }: { onAdd: (d: Diagnostico) => void }) {
+  const [titulo, setTitulo] = useState("");
+  const [rel, setRel] = useState("");
+  const [evi, setEvi] = useState("");
+  return (
+    <div className="rounded-2xl border border-dashed border-border p-3 space-y-2">
+      <Input
+        placeholder="Diagnóstico de enfermagem (ex: Risco de queda)"
+        value={titulo}
+        onChange={(e) => setTitulo(e.target.value)}
+      />
+      <Input placeholder="Relacionado a..." value={rel} onChange={(e) => setRel(e.target.value)} />
+      <Input
+        placeholder="Evidenciado por..."
+        value={evi}
+        onChange={(e) => setEvi(e.target.value)}
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full"
+        onClick={() => {
+          if (!titulo.trim()) return toast.error("Informe o diagnóstico.");
+          onAdd({
+            titulo: titulo.trim(),
+            relacionado_a: rel.trim() || undefined,
+            evidenciado_por: evi.trim() || undefined,
+          });
+          setTitulo("");
+          setRel("");
+          setEvi("");
+        }}
+      >
+        <Plus className="h-4 w-4" /> Adicionar diagnóstico
+      </Button>
+    </div>
+  );
+}
+
+function AddIntervencao({ onAdd }: { onAdd: (i: Intervencao) => void }) {
+  const [desc, setDesc] = useState("");
+  const [freq, setFreq] = useState("");
+  return (
+    <div className="rounded-2xl border border-dashed border-border p-3 space-y-2">
+      <Input
+        placeholder="Intervenção (ex: Avaliar sinais vitais)"
+        value={desc}
+        onChange={(e) => setDesc(e.target.value)}
+      />
+      <Input
+        placeholder="Frequência (ex: 6/6h)"
+        value={freq}
+        onChange={(e) => setFreq(e.target.value)}
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full"
+        onClick={() => {
+          if (!desc.trim()) return toast.error("Informe a intervenção.");
+          onAdd({ descricao: desc.trim(), frequencia: freq.trim() || undefined });
+          setDesc("");
+          setFreq("");
+        }}
+      >
+        <Plus className="h-4 w-4" /> Adicionar intervenção
+      </Button>
+    </div>
+  );
+}
+
+function AddPrescricao({ onAdd }: { onAdd: (p: Prescricao) => void }) {
+  const [item, setItem] = useState("");
+  const [via, setVia] = useState("");
+  const [horario, setHorario] = useState("");
+  const [obs, setObs] = useState("");
+  return (
+    <div className="rounded-2xl border border-dashed border-border p-3 space-y-2">
+      <Input
+        placeholder="Item (ex: Dipirona 1g)"
+        value={item}
+        onChange={(e) => setItem(e.target.value)}
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <Input placeholder="Via (VO/EV/IM)" value={via} onChange={(e) => setVia(e.target.value)} />
+        <Input
+          placeholder="Horário (ex: 8/8h)"
+          value={horario}
+          onChange={(e) => setHorario(e.target.value)}
+        />
+      </div>
+      <Input placeholder="Observação" value={obs} onChange={(e) => setObs(e.target.value)} />
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full"
+        onClick={() => {
+          if (!item.trim()) return toast.error("Informe o item.");
+          onAdd({
+            item: item.trim(),
+            via: via.trim() || undefined,
+            horario: horario.trim() || undefined,
+            observacao: obs.trim() || undefined,
+            feito: false,
+          });
+          setItem("");
+          setVia("");
+          setHorario("");
+          setObs("");
+        }}
+      >
+        <Plus className="h-4 w-4" /> Adicionar prescrição
+      </Button>
+    </div>
+  );
+}
+
+function NewEvolucaoDialog({
+
+============================================================
+NOVA EVOLUÇÃO
+============================================================
+function NewEvolucaoDialog({
+  open,
+  onOpenChange,
+  record,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  record: SaeRecord;
+  onSaved: () => void | Promise<void>;
+}) {
+  const [content, setContent] = useState("");
+  const [vital, setVital] = useState<VitalSigns>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setContent("");
+      setVital({});
+    }
+  }, [open]);
+
+  const submit = async () => {
+    if (!content.trim()) {
+      toast.error("Descreva a evolução.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("sae_evolutions").insert({
+      sae_record_id: record.id,
+      patient_id: record.patient_id,
+      professional_id: record.professional_id,
+      content: content.trim(),
+      vital_signs: vital as never,
+      procedures: [],
+    });
+    // Also persist to prontuário
+    if (!error) {
+      await supabase.from("health_records").insert({
+        patient_id: record.patient_id,
+        author_id: record.professional_id,
+        category: "evolucao",
+        title: `Evolução SAE — ${record.title}`,
+        content: content.trim(),
+        data: { vital_signs: vital, sae_record_id: record.id } as never,
+      });
+    }
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    await onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nova evolução</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Descrição da evolução</Label>
+            <Textarea
+              rows={5}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Estado geral, resposta às intervenções, intercorrências..."
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Sinais vitais (opcional)</Label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              <Input
+                placeholder="PA"
+                value={vital.pa ?? ""}
+                onChange={(e) => setVital({ ...vital, pa: e.target.value })}
+              />
+              <Input
+                placeholder="FC"
+                value={vital.fc ?? ""}
+                onChange={(e) => setVital({ ...vital, fc: e.target.value })}
+              />
+              <Input
+                placeholder="Temp"
+                value={vital.temp ?? ""}
+                onChange={(e) => setVital({ ...vital, temp: e.target.value })}
+              />
+              <Input
+                placeholder="SpO₂"
+                value={vital.spo2 ?? ""}
+                onChange={(e) => setVital({ ...vital, spo2: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button className="bg-gradient-primary" onClick={submit} disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Registrar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+============================================================
+VERSÕES
+============================================================
+
+function SectionVersionBar({
+  recordId,
+  section,
+  canEdit,
+  currentPayload,
+  onRestore,
+  onPublish,
+}: {
+  recordId: string;
+  section: SectionKey;
+  canEdit: boolean;
+  currentPayload: Record<string, unknown>;
+  onRestore: (payload: Record<string, unknown>) => void;
+  onPublish: () => Promise<void>;
+}) {
+  const { user } = useProfile();
+  const [versions, setVersions] = useState<SectionVersion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState<null | "rascunho" | "publicada">(null);
+  const [histOpen, setHistOpen] = useState(false);
+  const [note, setNote] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("sae_section_versions")
+      .select("*")
+      .eq("sae_record_id", recordId)
+      .eq("section", section)
+      .order("created_at", { ascending: false });
+    if (error) toast.error(error.message);
+    setVersions((data as unknown as SectionVersion[]) ?? []);
+    setLoading(false);
+  }, [recordId, section]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const latestDraft = versions.find((v) => v.status === "rascunho") ?? null;
+  const latestPublished = versions.find((v) => v.status === "publicada") ?? null;
+  const publishedCount = versions.filter((v) => v.status === "publicada").length;
+
+  const nextVersion = (status: VersionStatus) => {
+    if (status === "publicada") return publishedCount + 1;
+    return (latestDraft?.version_number ?? 0) + 1;
+  };
+
+  const create = async (status: VersionStatus) => {
+    if (!user) return;
+    setSaving(status);
+    try {
+      if (status === "publicada") {
+        await onPublish();
+      }
+      const { error } = await supabase.from("sae_section_versions").insert({
+        sae_record_id: recordId,
+        section,
+        status,
+        version_number: nextVersion(status),
+        payload: currentPayload,
+        note: note.trim() || null,
+        author_id: user.id,
+      } as never);
+      if (error) throw new Error(error.message);
+      setNote("");
+      toast.success(status === "rascunho" ? "Rascunho salvo" : "Versão publicada");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Excluir esta versão?")) return;
+    const { error } = await supabase.from("sae_section_versions").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Versão excluída");
+    await load();
+  };
+
+  return (
+    <>
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <FileClock className="h-4 w-4 text-primary" />
+          <span className="text-xs font-semibold text-foreground">{SECTION_LABEL[section]}</span>
+          {latestPublished ? (
+            <Badge variant="secondary" className="text-[10px]">
+              v{latestPublished.version_number} publicada ·{" "}
+              {new Date(latestPublished.created_at).toLocaleDateString("pt-BR")}
+            </Badge>
+          ) : (
