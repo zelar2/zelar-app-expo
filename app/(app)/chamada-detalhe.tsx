@@ -81,7 +81,12 @@ function dateTime(value?: string | null) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("pt-BR");
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function nextStatus(status: ServiceCallStatus): {
@@ -92,7 +97,7 @@ function nextStatus(status: ServiceCallStatus): {
     case "aceita":
       return {
         next: "a_caminho",
-        label: "Iniciar deslocamento",
+        label: "Estou a caminho",
       };
     case "a_caminho":
       return {
@@ -184,10 +189,44 @@ export default function ChamadaDetalheScreen() {
     void load();
   }, [load]);
 
-  async function advance() {
-    if (!call) return;
+  useEffect(() => {
+    if (!id) return;
 
-    const step = nextStatus(call.status as ServiceCallStatus);
+    const channel = supabase
+      .channel(`service-call-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "service_calls",
+          filter: `id=eq.${id}`,
+        },
+        () => void load(),
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [id, load]);
+
+  async function advance() {
+    if (!call || !user?.id) return;
+
+    // Somente o profissional atualmente vinculado pode avançar
+    // a chamada. O RLS/trigger do Supabase continua sendo a
+    // autoridade definitiva de segurança.
+    if (call.professional_id !== user.id) {
+      Alert.alert(
+        "Acesso não permitido",
+        "Somente o profissional responsável pode avançar esta chamada.",
+      );
+      return;
+    }
+
+    const currentStatus = call.status as ServiceCallStatus;
+    const step = nextStatus(currentStatus);
 
     if (!step) return;
 
@@ -213,10 +252,14 @@ export default function ChamadaDetalheScreen() {
       patch.completed_at = new Date().toISOString();
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("service_calls")
       .update(patch)
-      .eq("id", call.id);
+      .eq("id", call.id)
+      .eq("professional_id", user.id)
+      .eq("status", currentStatus)
+      .select("id")
+      .maybeSingle();
 
     setBusy(false);
 
@@ -228,11 +271,46 @@ export default function ChamadaDetalheScreen() {
       return;
     }
 
+    if (!data) {
+      Alert.alert(
+        "Chamada atualizada",
+        "O status desta chamada mudou. Os dados serão atualizados.",
+      );
+      await load();
+      return;
+    }
+
     await load();
   }
 
   async function cancel() {
-    if (!call) return;
+    if (!call || !user?.id) return;
+
+    const isRequester =
+      user.id === call.requester_id ||
+      user.id === call.patient_id;
+
+    const isProfessional =
+      user.id === call.professional_id;
+
+    if (!isRequester && !isProfessional) {
+      Alert.alert(
+        "Acesso não permitido",
+        "Você não participa desta chamada.",
+      );
+      return;
+    }
+
+    if (
+      call.status === "concluida" ||
+      call.status === "cancelada"
+    ) {
+      Alert.alert(
+        "Chamada encerrada",
+        "Esta chamada não pode mais ser cancelada.",
+      );
+      return;
+    }
 
     Alert.alert(
       "Cancelar chamada",
@@ -248,13 +326,19 @@ export default function ChamadaDetalheScreen() {
           onPress: async () => {
             setBusy(true);
 
-            const { error } = await supabase
+            const { data, error } = await supabase
               .from("service_calls")
               .update({
                 status: "cancelada",
                 cancelled_at: new Date().toISOString(),
               })
-              .eq("id", call.id);
+              .eq("id", call.id)
+              .eq("status", call.status as ServiceCallStatus)
+              .or(
+                `requester_id.eq.${user.id},patient_id.eq.${user.id},professional_id.eq.${user.id}`,
+              )
+              .select("id")
+              .maybeSingle();
 
             setBusy(false);
 
@@ -263,6 +347,15 @@ export default function ChamadaDetalheScreen() {
                 "Erro",
                 "Não foi possível cancelar a chamada.",
               );
+              return;
+            }
+
+            if (!data) {
+              Alert.alert(
+                "Chamada atualizada",
+                "A chamada já foi alterada ou encerrada.",
+              );
+              await load();
               return;
             }
 

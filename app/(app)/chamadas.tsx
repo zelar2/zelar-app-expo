@@ -13,6 +13,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { fromTable } from "@/integrations/supabase/typed";
+import * as Location from "expo-location";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/auth-context";
 import { colors } from "@/theme/colors";
@@ -210,8 +211,7 @@ export default function ChamadasScreen() {
     if (!channel) return;
 
     return () => {
-      // Mantido como cleanup defensivo para versões diferentes
-      // do cliente Supabase usado pelo projeto.
+      void supabase.removeChannel(channel);
     };
   }, [user?.id]);
 
@@ -293,6 +293,35 @@ export default function ChamadasScreen() {
     await loadAll();
   }
 
+  const [coords, setCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  async function loadCurrentLocation() {
+    try {
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        return;
+      }
+
+      const position =
+        await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+      setCoords({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+    } catch {
+      // A localização é complementar; a chamada continua
+      // podendo ser criada somente com o endereço.
+    }
+  }
+
   async function createRequest() {
     if (!user?.id) return;
 
@@ -320,6 +349,8 @@ export default function ChamadasScreen() {
         price_cents: procedure?.price_cents ?? 0,
         status: "buscando" as const,
         notes: notes.trim() || null,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
       };
 
       const { error } = await supabase.from("service_calls").insert(payload);
@@ -331,6 +362,7 @@ export default function ChamadasScreen() {
       setPatientId("");
       setAddressComplement("");
       setNotes("");
+      setCoords(null);
 
       Alert.alert(
         "Atendimento solicitado",
@@ -351,6 +383,7 @@ export default function ChamadasScreen() {
   function openRequest() {
     setRequestAddress(address);
     setRequestOpen(true);
+    void loadCurrentLocation();
   }
 
   function renderCall(call: ServiceCall, available = false) {
