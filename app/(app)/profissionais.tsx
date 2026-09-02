@@ -96,7 +96,15 @@ export default function ProfissionaisScreen() {
       }
 
       setProfs((profilesResult.data ?? []) as ProfRow[]);
-      setVinculos((vinculosResult.data ?? []) as VinculoRow[]);
+      setVinculos(
+        (vinculosResult.data ?? []).map((row: any) => ({
+          profissional_id: row.profissional_id,
+          is_primary: row.is_primary,
+          especialidade: Array.isArray(row.especialidade)
+            ? row.especialidade[0] ?? null
+            : row.especialidade ?? null,
+        })) as VinculoRow[],
+      );
       setDispos((disposResult.data ?? []) as DispoRow[]);
       setLoading(false);
     }
